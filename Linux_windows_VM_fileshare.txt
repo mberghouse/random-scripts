@@ -1,0 +1,5 @@
+To connect a Linux VM to a Windows host follow these steps:
+1. Share folder on Linux VM
+2. Find IP address of Linux with hostname -I
+3. Right click on Windows Desktop - new - shortcut
+4. \\IP_ADDRESS\SHARED_FOLDER_NAME

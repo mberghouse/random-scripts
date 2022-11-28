@@ -1,0 +1,51 @@
+### Envirnoment vars for WSL ###
+export PATH=~/petsc/arch-linux2-c-opt/bin:$PATH
+export PATH=~/.local/bin:$PATH
+export PETSC_ARCH=arch-linux2-c-opt
+export PETSC_DIR=~/petsc
+export CHROTRAN_DIR=~/petsc/release
+cd ~/
+cd /mnt/c/users/marcb/Desktop/chrotran_examples/example_2
+mpirun -n 24 $CHROTRAN_DIR/src/pflotran/chrotran -input_prefix CT3_new
+
+### Build Docker Image ###
+docker build -t chrotran_ghammond .
+## Using latest commit ##
+docker build -pull -t chrotran_darcy_vel .
+## Totally reset cache  ##
+docker build --no-cache -t pflotran_test .
+## Reset cache from certain point (change incubater ver)  ##
+docker build --build-arg INCUBATOR_VER=3 -t chrotran_darcy_vel_new . 
+### Create Docker Container ###
+docker container create -i -t --name mycontainer chrotran
+
+### Enter Shell for Docker Container ###
+docker container start --attach -i mycontainer
+
+
+### Run Docker image with temp container and mount volume to ~/desired/host/folder:/in/desired/container/folder ###
+docker run -ti -v ~/C/Users/marcb/Desktop/chrotran:/datavolume chrotran_v313_2
+docker run -ti -v ~/C/Users/marcb/Desktop/chrotran:/datavolume bsjacky/pflotran_docker
+cd ../../../../../datavolume/chrotran_examples/hypor_bio
+export PATH=/petsc/arch-linux-c-debug/bin:$PATH
+export PATH=/petsc/arch-linux2-c-debug/bin:$PATH
+export PATH=/petsc/arch-linux-c-opt/bin:$PATH
+export PATH=/petsc/petsc-arch/bin:$PATH
+export PATH=/.local/bin:$PATH
+mpirun -n 4 $PFLOTRAN_DIR/src/pflotran/pflotran -input_prefix CT_presslist_accurate_vel
+mpirun -n 20 /petsc/pflotran/src/pflotran/pflotran -input_prefix cyber
+mpirun -n 20 /petsc/pflotran_master/src/pflotran/pflotran -input_prefix CT_darcy_flowpath2
+cd ../software/pflotran/regression_tests/default/reaction_sandbox
+cd ../datavolume/chrotran_examples/example_2
+mpirun -n 10 $PFLOTRAN_DIR/src/pflotran/pflotran -input_prefix CT2
+### Push image to Docker Hub ###
+###docker tag "image number" "username/repo:tag_title
+docker tag 3c147b6a075b yourhubusername/verse_gapminder:firsttry
+docker push yourhubusername/verse_gapminder
+
+docker tag 3c147b6a075b mberghouse/pflotran_test
+docker push mberghouse/pflotran_test
+
+singularity pull docker://mberghouse/pflotran_test
+
+#### To exit docker, hit ctrl-D or type "exit" #####

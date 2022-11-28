@@ -1,0 +1,11 @@
+
+blockMesh
+surfaceFeatures
+decomposePar -noZero
+mpirun --np 12 snappyHexMesh -parallel -overwrite
+reconstructParMesh -constant -noZero
+sed -i 's/method          hierarchical;/method          scotch;/' system/decomposeParDict
+decomposePar
+mpirun -np 12 simpleFoam -parallel
+reconstructPar
+rm -rf processor*
