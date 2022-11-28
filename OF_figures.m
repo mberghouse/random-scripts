@@ -1,0 +1,402 @@
+%filename='D:\802020_1ulh_pronghorn\slice_geo.csv';
+filename='C:/Users/marcb/Desktop/OF_experimental_simulation/OF_401020_1ulh_2dcorrected/8113/C';
+opt = detectImportOptions(filename);
+opt = setvartype(opt, [1 3], 'double');
+opt = setvaropts(opt, 'Prefixes', {'('}, 'Suffixes', {')'});
+D = readmatrix(filename,opt);
+%l=length(D)-25;
+x=D(2:end,1);
+y=D(2:end,2);
+z=D(2:end,3);
+C=horzcat(x,z);
+C(length(ux)+1:end,:)=[];
+%filename='D:\802020_1ulh_pronghorn\slice.csv';
+filename='C:/Users/marcb/Desktop/OF_experimental_simulation/OF_401020_1ulh_2dcorrected/8113/U';
+D = readmatrix(filename,opt);
+%shear=D(2:end,5:10);
+ux=D(2:end,1);
+uy=D(2:end,2);
+uz=D(2:end,3);
+U_8020_1ulh=sqrt(ux.^2+uy.^2+uz.^2);
+shear_mag=sqrt(shear(:,1).^2+shear(:,2).^2+shear(:,3).^2+shear(:,4).^2+shear(:,5).^2+shear(:,6).^2);
+shear_mag=sqrt(shear(:,4).^2+shear(:,5).^2+shear(:,6).^2);
+
+writematrix(C,'C:\Users\marcb\Desktop\C_4010_2dsim.csv')
+writematrix(U_8020_1ulh,'C:\Users\marcb\Desktop\Umag_4010_2dsim.csv')
+
+filename='D:\802020_1ulh_pronghorn\4511\U';
+opt = detectImportOptions(filename);
+opt = setvartype(opt, [1 3], 'double');
+opt = setvaropts(opt, 'Prefixes', {'('}, 'Suffixes', {')'});
+D = readmatrix(filename, opt);
+l=length(D)-25;
+ux=D(1:l,1);
+uy=D(1:l,2);
+uz=D(1:l,3);
+U_8020_1ulh=sqrt(ux.^2+uy.^2+uz.^2);
+roundz=round(z./2.77083333e-7);
+roundz=roundz(1:length(ux));
+U_8020_1ulh=U_8020_1ulh(roundz==1);
+x2=x(roundz==1);
+y2=y(roundz==1);
+z2=z(roundz==1);
+x2=x2(1:1663^2);
+y2=y2(1:1663^2);
+z2=z2(1:1663^2);
+U_8020_1ulh=U_8020_1ulh(1:1663^2);
+% clc
+% close alll
+% clear all
+
+%read data
+x2=x(1:2399^2);
+y2=y(1:2399^2);
+z2=z(1:2399^2);
+U_8020_1ulh2=U_8020_1ulh;
+U_8020_1ulh2(U_8020_1ulh2<1e-7)=0;
+%enforce y==0 where y<1e-9 (to avoid NaN at centerline)
+%y(y<1e-9)=0;
+%make rectangular grid
+Nx = 2400;
+Ny = Nx;
+xx = linspace(min(x),max(x),Nx);
+yy = linspace(min(y),max(y),Ny);
+[xi,yi]=meshgrid(xx,yy);
+%interpolate results on rectangular grid
+zi=griddata(x,y,U_8020_1ulh2,xi,yi);
+zi_shear=griddata(x,y,shear_mag,xi,yi);
+zi_shear(find(zi<9e-6))=0;
+%zi(mask_slice==1)=0;
+%zi_shear(zi_shear>1e-5)=0;
+
+%imagesc(zi,clim_u)
+%%%%%%%% FINAL PLOTS!! %%%%%%%%%%%
+im_shear=readmatrix('802020_1ulh_shear.csv');
+im_4020=readmatrix('OF_slices\402020_1ulh_vel.csv');
+im=readmatrix('OF_slices\802020_1ulh_vel.csv');
+%im_shear_4020=readmatrix('402020_1ulh_shear.csv');
+
+J = imrotate(im(800:1400,1060:1660)',2,'bilinear','crop');
+%J = imrotate(im_shear(800:1400,1060:1660)',2,'bilinear','crop');
+
+%%%%802020 image bounds
+final_im=J(50:570,50:570);
+%%%%402020 image bounds
+%final_im=J(95:395,125:425);
+
+clim_u=[1e-6*1e6,0.0002*1e6];
+clim_shear=[5e-7*1e3,1e-4*1e3];
+imagesc(final_im,clim_shear)
+c=colorbar;
+c.FontSize=16;
+c.FontWeight='bold';
+set(gca,'ColorScale','log')
+axis square
+ax=gca;
+ax.YAxis.Color='white';
+ax.XAxis.Color='white';
+ax.XTick=[];
+ax.YTick=[];
+box off
+
+saveas(gcf,'shear_colorbar.png');
+
+
+% fig1=figure;
+% left=100; bottom=100 ; width=20 ; height=500;
+% pos=[left bottom width height];
+% axis off
+% colorbar([0.1 0.1  0.7  0.8]);
+% set(fig1,'OuterPosition',pos) 
+% 
+% ax = axes;
+% c = colorbar(ax);
+% ax.Visible = 'off';
+% 
+% hf = figure('Units','normalized'); 
+% hCB = colorbar('north');
+% set(gca,'Visible',false)
+% hCB.Position = [0.15 0.3 0.74 0.4];
+% hf.Position(4) = 0.1000;
+
+%mirror
+xi = [ xi(end:-1:2,: ); xi];
+yi = [-yi(end:-1:2,: ); yi];
+zi = [ zi(end:-1:2,: ); zi];
+
+%plot
+figure()
+hcb=colorbar;
+colorTitleHandle = get(hcb,'Title');
+titleString = '[Pa]';
+set(colorTitleHandle ,'String',titleString);
+title('Pressure Distribution');
+xlabel('X coordinate');
+ylabel('Y coordinate');
+contourf(xi,yi,zi,100, 'edgecolor', 'none');
+axis([0 0.0508 -0.015 0.015]);
+
+%writematrix(U,'C:\Users\marcb\Desktop\U_802020_5ulh.csv')
+
+U_8020_1ulh=sqrt(ux.^2+uy.^2+uz.^2);
+
+filename='D:\802020_5ulh_pronghorn\constant\polyMesh\points';
+opt = detectImportOptions(filename);
+opt = setvartype(opt, [1 3], 'double');
+opt = setvaropts(opt, 'Prefixes', {'('}, 'Suffixes', {')'});
+D = readmatrix(filename, opt);
+l=length(D)-29;
+x=D(1:l,1);
+y=D(1:l,2);
+z=D(1:l,3);
+
+modelname='D:/802020_5ulh_pronghorn/geo.obj';
+s=loadawobj(modelname);
+s.faces=s.faces(1:3,:);
+s.faces=s.faces';
+s.vertices=s.vertices';
+
+patch('Vertices',s.vertices,'Faces',s.faces,'FaceColor','g');
+view(30,0);
+axis('equal');
+snapnow
+img=patch('Vertices',s.v','Faces',s.f4','FaceColor','g');
+w2 = vrworld('');
+node=vrpatch2ifs(img,w2);
+
+[gridOUTPUTy,gridCOx,gridCOy,gridCOz] = VOXELISE(2400,2400,10,s,'y');
+fprintf ('Done with y projection')
+[gridOUTPUTx,gridCOx,gridCOy,gridCOz] = VOXELISE(2400,2400,10,s,'x');
+fprintf ('Done with x projection')
+[gridOUTPUTz,gridCOx,gridCOy,gridCOz] = VOXELISE(2400,2400,1,s,'z');
+fprintf ('Done with z projection')
+[gridOUTPUT,gridCOx,gridCOy,gridCOz] = VOXELISE(2400,2400,10,s,'xyz');
+fprintf ('Done with xyz projection')
+[gridOUTPUT1,gridCOx,gridCOy,gridCOz] = VOXELISE(2400,2400,10,s,'yz');
+fprintf ('Done with yz projection')
+[gridOUTPUT2,gridCOx,gridCOy,gridCOz] = VOXELISE(2400,2400,10,s,'xz');
+fprintf ('Done with xz projection')
+[gridOUTPUT3,gridCOx,gridCOy,gridCOz] = VOXELISE(2400,2400,10,s,'xy');
+fprintf ('Done with xy projection')
+
+
+imshow(gridOUTPUT1(:,:,1)+gridOUTPUT2(:,:,1)+gridOUTPUT3(:,:,1))
+[gridOUTPUT,gridCOx,gridCOy,gridCOz] = VOXELISE(6000,6000,1,s);
+grid_sum=0;
+
+for i=1:36
+    grid_sum=grid_sum+gridOUTPUT1(:,:,i)+gridOUTPUT2(:,:,i)+gridOUTPUT3(:,:,i);
+end
+
+yourboundaries=[1:20,1:20,1:2];% get the range of your data from the STL file
+[x,y,z]=meshgrid(yourboundaries);
+P=[x(:) y(:) z(:)];
+in=inmesh(gm,P);
+img=reshape(in,yourboundariesSize);
+gm = stlread("C:/Users/marcb/Desktop/8020_geo.stl");
+gm2 = stlread2("D:/802020_5ulh_pronghorn/myMesh.stl");
+gm = stlread("D:/802020_5ulh_pronghorn/surfaces.stl");
+
+mask = load("C:/Users/marcb/Desktop/802020_3dmask.mat");
+binsX = 2400;
+binsY=2400;
+%binsZ = 72;
+% Geometry
+G = abs(mask_slice(:)-1);
+G=G(1:length(ux));
+% Create a mask
+CAx = zeros(length(G),1);
+CAy = zeros(length(G),1);
+%CAz = zeros(length(G),1);
+% use .raw instead - if you don't you will have to fix by hand as I'm doing here
+% mm = numel(ux); bb = CAx(G>0);
+% r = mm-length(bb);
+% % where there is no grain put the value in it
+% G(end-(r-1):end) = [];
+
+%ux(length(ux):length(CAx(G<1)))=0;
+%ux=ux(1:length(CAx(G>0)));
+CAx=CAx(1:length(ux));
+CAy=CAy(1:length(uy));
+CAx(G<1) = ux(G<1);
+CAy(G<1) = uy(G<1);
+%CAz(G>0) = uz;
+% Vel Map
+%vMapz = reshape(CAz(1:2399^2),binsZ,[]);
+vMapx = reshape(CAx(1:5755200),binsX,[]);
+vMapy = reshape(CAy(1:5755200),binsY,[]);
+vMap2 = sqrt(vMapy.^2+vMapx.^2);
+imagesc(vMap2);
+% gm_pos=gm.Points(gm.Points(:,3)>0,:);
+% gm_2d=gm_pos(:,1:2);
+% bound=reshape(gm_2d(1:865928,:),[1316],[]);
+
+% A = vtk2array(, );
+% filename="D:/802020_1ulh_pronghorn/802020_1ulh_4511.vtk"
+% time="4511"
+% 
+% [X,Y,Z]=meshgrid(1:2400,1:2400,1:72);
+% norm_points=round(points./2.77e-7);
+% norm_points(:,3)=norm_points(:,3)+36;
+% mask=zeros([2400,2400,72]);
+% pt_reshape=reshape(norm_points,[159237369*3,1]);
+% for i=1:5
+%     for j=1:5
+%         for k=1:5
+%             for row=1:length(points)
+%                 if norm_points(row,:)==[i,j,k]
+%                     mask(i,j,k)=1;
+%                     fprintf ('we found a match at')
+%                     [i j k]
+%                 else
+%                     mask(i,j,k)=0;
+%                 end
+%             end
+%         end
+%     end
+% end
+% 
+% for n=1:2400
+%     idx=find(pt_reshape==n);
+%     for i=idx
+%         if i < 159237369
+%             x=n;
+% 
+%         end
+% 
+%     
+%     end
+% end
+% 
+% mask=zeros([2400,2400,72]);
+% good_points=norm_points;
+% B = unique(good_points,'rows');
+% 
+% for i=1:2400
+%     i
+%     for j=1:2400
+%             idx = find(ismember(B, [i j 3],'rows'));
+%             if isempty(idx)==0
+%                 mask(i,j,:)=1;
+%                 B(idx:idx+68,:)=[];
+%             end
+%  
+%     end
+% end
+% 
+% 
+% mask=zeros([2400,2400,72]);
+% good_points=norm_points;
+% B = unique(good_points,'rows');
+% 
+% for i=200:600
+%     for j=200:600
+%         if i==j
+%             if sum(size(intersect(B,[i j 4])))==3
+%                 mask(i,j,:)=1;
+%                 [i j 4]
+%             end
+%         else
+%             if sum(size(intersect(B,[i j 4])))==4
+%                 mask(i,j,:)=1;
+%                 [i j 4]
+%             end
+%             %good_points(idx,:)=[];
+%         end
+%     end
+% end
+
+stlData = stlread('D:\802020_1ulh_pronghorn\geo.stl');
+points = stlData.Points;
+
+
+img=imread('../Desktop/myim.png');
+I=imfill(img);
+I2=I./255;
+mask=cast(I2,"logical");
+I2( 1292,727)=1;
+I2( 1060,465)=1;
+I2( 1063,248)=1;
+I2( 1322,229)=1;
+I2( 1333,238)=1;
+I2( 1355,250)=1;
+I2(1294, 511)=1;
+I2(1305, 502)=1;
+I2(1733, 266)=1;
+I2(2208, 275)=1;
+I2(2391:2400, 18)=1;
+I2(2391:2400, 305)=1;
+I2(2181, 772)=1;
+I2(1961, 1038)=1;
+I2(2400, 19:304)=1;
+I2(1994, 1085)=1;
+I2(1985, 1307)=1;
+I2(2187, 1291)=1;
+I2(1531, 990)=1;
+I2(1542, 999)=1;
+I2(1303, 1250)=1;
+I2(1491, 1287)=1;
+I2(1482, 1298)=1;
+I2(1508, 1489)=1;
+I2(1519, 1498)=1;
+I2(1529, 1504)=1;
+I2(1930, 1535)=1;
+I2(1946, 1550)=1;
+I2(2154, 1269)=1;
+I2(2227, 1563)=1;
+I2(2176, 1798)=1;
+I2(2165, 1789)=1;
+I2(1968, 1997)=1;
+I2(2379, 2037)=1;
+I2(2110, 2276)=1;
+I2(1912, 2397)=1;
+I2(1887, 2017)=1;
+I2(1917, 2039)=1;
+I2(1734, 1323)=1;
+I2(1900, 1515)=1;
+I2(1508, 2003)=1;
+I2(1497, 1997)=1;
+I2(1486, 1988)=1;
+I2(1459, 1956)=1;
+I2(1244, 2237)=1;
+I2(1233, 2228)=1;
+I2(1234, 2008)=1;
+I2(1245, 1999)=1;
+I2(1451, 1522)=1;
+I2(1258, 1508)=1;
+I2(1240, 1294)=1;
+I2(1031, 1237)=1;
+I2(979, 1520)=1;
+I2(975, 1514)=1;
+I2(966, 1503)=1;
+I2(731, 2192)=1;
+I2(722, 2181)=1;
+I2(987, 1956)=1;
+I2(999, 1614)=1;
+I2(738, 1247)=1;
+I2(728, 1236)=1;
+I2(510, 1241)=1;
+I2(487, 1502)=1;
+I2(483, 1497)=1;
+I2(475, 1486)=1;
+I2(247, 1230)=1;
+I2(237, 1219)=1;
+I2(13, 1228)=1;
+I2(231, 2164)=1;
+I2(239, 2175)=1;
+
+I2(492, 1926)=1;
+I2(483, 1915)=1;
+I2(107:208, 2400)=1;
+
+I2=imfill(I2);
+imagesc(I2)
+
+I2(:,:,2)=I2;
+for i=1:72
+    I2(:,:,i)=I2(:,:,1);
+end
+
+writematrix(U,'C:\Users\marcb\Desktop\U_802020_1ulh.csv')
+   
+
